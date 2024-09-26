@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Annotator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f0f0f0;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+      }
+
+      .logout-button {
+        background-color: #ff4d4d;
+        color: white;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .logout-button:hover {
+        background-color: #d43f3f;
+      }
+
+      .wrapper {
+        width: 100%;
+        max-width: 960px;
+        margin: 20px;
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background-color: #fafafa;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .text-column {
+        width: 50%;
+        font-size: 16px;
+        line-height: 1.5;
+        max-height: 100px; /* Limit height */
+        overflow-y: auto; /* Make scrollable */
+        padding-right: 10px;
+        box-sizing: border-box;
+      }
+
+      .text-column::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .text-column::-webkit-scrollbar-thumb {
+        background-color: #ccc;
+        border-radius: 3px;
+      }
+
+      .button-column {
+        width: 45%;
+        display: flex;
+        flex-wrap: nowrap; /* Keep buttons in one row */
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      /* Styling for radio button labels */
+      .button-column label {
+        display: inline-block;
+        padding: 10px 15px;
+        background-color: #f0f0f0;
+        border: 2px solid transparent;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap; /* Prevent text wrapping */
+        font-size: 14px;
+        text-align: center;
+      }
+
+      /* Make selected radio button visually different */
+      .button-column input[type="radio"] {
+        display: none; /* Hide the actual radio input */
+      }
+
+      .button-column input[type="radio"]:checked + label {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+
+      .button-column label:hover {
+        background-color: #e0e0e0;
+      }
+
+      /* Adjust button widths and alignment */
+      button {
+        padding: 8px 12px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-size: 14px;
+        white-space: nowrap; /* Prevent buttons from getting too wide */
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      /* Ensure buttons don't stretch across the full width */
+      button[type="submit"] {
+        width: auto;
+      }
+
+      /* Styling for the top row buttons (First, Previous, Next, Next Unannotated) */
+      .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .left-buttons,
+      .right-buttons {
+        display: flex;
+        gap: 10px; /* Space between the buttons */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <h1>Text Annotation Tool</h1>
+      <div class="header">
+        <h2>Annotator: {{ annotator_name }}</h2>
+        <a href="{{ url_for('logout') }}">
+          <button class="logout-button">Logout</button>
+        </a>
+      </div>
+
+      <div>
+        <p>Document: {{ current_index+1 }}/{{ total_rows }}</p>
+        {% if is_annotated %}
+        <p style="color: green; font-weight: bold">
+          This document has already been annotated by you. {% if current_index+1
+          == total_rows %} No more documents to annotate. {% endif %}
+        </p>
+        {% endif %}
+      </div>
+      <form method="POST">
+        <input type="hidden" name="row_id" value="{{ row_id }}" />
+        <!-- Top row with buttons and n/total count -->
+        <div class="top-row">
+          <!-- Left side: First and Previous buttons -->
+          <div class="left-buttons">
+            {% if current_index %}
+            <button type="submit" name="first">First</button>
+            <button type="submit" name="previous">Previous</button>
+            {% endif %}
+          </div>
+
+          <!-- Right side: Next and Next Unannotated buttons -->
+          <div class="right-buttons">
+            {% if current_index < total_rows and is_annotated %}
+            <button type="submit" name="next">Next</button>
+            <button type="submit" name="last">Last</button>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Annotation form content starts here -->
+        <div class="container">
+          {% for i, line in enumerate(content) %}
+          <div class="row">
+            <div class="text-column">{{ line["line"] }}</div>
+            <div class="button-column">
+              {% for k, label in enumerate(line["label"].split(";")) %}
+              <div class="label-group">
+                <span
+                  style="
+                    font-weight: bold;
+                    font-variant: italic;
+                    line-height: 30px;
+                  "
+                  >{{ label }}</span
+                >
+                <div class="button-group">
+                  <input type="radio" id="label_agree_{{ i }}_{{ k }}"
+                  name="label_{{ i }}_{{ k }}" value="agree" {% if not
+                  user_annotation or user_annotation[i][k] == "agree" %} checked
+                  {% endif %} />
+                  <label for="label_agree_{{ i }}_{{ k }}">Agree</label>
+                  <input type="radio" id="label_disagree_{{ i }}_{{ k }}"
+                  name="label_{{ i }}_{{ k }}" value="disagree" {% if
+                  user_annotation and user_annotation[i][k] == "disagree" %}
+                  checked {% endif %} />
+                  <label for="label_disagree_{{ i }}_{{ k }}">Disagree</label>
+                  <input type="radio" id="label_agree_but_not_junk_{{ i }}_{{ k
+                  }}" name="label_{{ i }}_{{ k }}" value="agree_but_not_junk" {%
+                  if user_annotation and user_annotation[i][k] ==
+                  "agree_but_not_junk" %} checked {% endif %} />
+                  <label for="label_agree_but_not_junk_{{ i }}_{{ k }}"
+                    >Agree but not junk</label
+                  >
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <br />
+
+        <!-- Save Annotations button (remains at the bottom) -->
+        <div style="text-align: center">
+          <button type="submit" name="save" style="width: 75%">
+            {% if is_annotated %}Update{% else %}Save{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>
