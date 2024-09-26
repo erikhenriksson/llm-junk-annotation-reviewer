@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, session
 
 app = Flask(__name__)
 app.secret_key = "1aa49uoqij_ahkdvbGtki3lurq"
-# app.config["APPLICATION_ROOT"] = "/llmjunkevaluator"
+app.config["APPLICATION_ROOT"] = "/llmjunkevaluator"
 
 # Path to the JSONL file
 DATA_FILE = "data.jsonl"
